@@ -69,7 +69,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion "1.4.6"
+        kotlinCompilerExtensionVersion "1.4.7"
     }
 
     packagingOptions {
@@ -94,7 +94,7 @@ dependencies {
     implementation "androidx.compose.foundation:foundation"
     implementation "androidx.compose.material:material"
     implementation "androidx.compose.material:material-icons-extended"
-    implementation "androidx.activity:activity-compose:1.7.1"
+    implementation "androidx.activity:activity-compose:1.7.2"
     debugImplementation "androidx.compose.ui:ui-tooling"
 
     // Testing dependencies
