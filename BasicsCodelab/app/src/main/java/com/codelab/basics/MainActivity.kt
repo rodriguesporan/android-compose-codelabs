@@ -20,9 +20,11 @@ import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,9 +56,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.codelab.basics.ui.theme.BasicsCodelabTheme
 
-class MainActivity : ComponentActivity() {
+internal class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
             BasicsCodelabTheme {
                 MyApp(modifier = Modifier.fillMaxSize())
@@ -66,10 +69,8 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MyApp(modifier: Modifier = Modifier) {
-
-    var shouldShowOnboarding by rememberSaveable { mutableStateOf(true) }
-
+private fun MyApp(modifier: Modifier = Modifier) {
+    var shouldShowOnboarding: Boolean by rememberSaveable { mutableStateOf(true) }
     Surface(modifier) {
         if (shouldShowOnboarding) {
             OnboardingScreen(onContinueClicked = { shouldShowOnboarding = false })
@@ -80,11 +81,10 @@ fun MyApp(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun OnboardingScreen(
+private fun OnboardingScreen(
     onContinueClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-
     Column(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -92,52 +92,60 @@ fun OnboardingScreen(
     ) {
         Text("Welcome to the Basics Codelab!")
         Button(
-            modifier = Modifier
-                .padding(vertical = 24.dp),
+            modifier = Modifier.padding(vertical = 24.dp),
             onClick = onContinueClicked
         ) {
             Text("Continue")
         }
     }
-
 }
 
 @Composable
-private fun Greetings(
-    modifier: Modifier = Modifier,
-    names: List<String> = List(1000) { "$it" }
-) {
+private fun Greetings(modifier: Modifier = Modifier) {
+    var greetings: List<GreetingModel> by rememberSaveable {
+        mutableStateOf(
+            List(1000) { GreetingModel(name = it.toString(), isExpanded = false) }
+        )
+    }
     LazyColumn(modifier = modifier.padding(vertical = 4.dp)) {
-        items(items = names) { name ->
-            Greeting(name = name)
+        items(items = greetings) { greeting ->
+            Greeting(onToggle = {
+                greetings = greetings.map { item ->
+                    if (item == greeting) {
+                        item.copy(isExpanded = !item.isExpanded)
+                    } else {
+                        item
+                    }
+                }
+            }, modifier, current = greeting)
         }
     }
 }
 
 @Composable
-private fun Greeting(name: String, modifier: Modifier = Modifier) {
+private fun Greeting(
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+    current: GreetingModel
+) {
     Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        ),
-        modifier = modifier.padding(vertical = 4.dp, horizontal = 8.dp)
+        modifier = modifier.padding(vertical = 4.dp, horizontal = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
     ) {
-        CardContent(name)
+        CardContent(onToggle, current)
     }
 }
 
 @Composable
-private fun CardContent(name: String) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-
+private fun CardContent(
+    onToggle: () -> Unit,
+    current: GreetingModel
+) {
     Row(
         modifier = Modifier
             .padding(12.dp)
             .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessLow
-                )
+                animationSpec = tween()
             )
     ) {
         Column(
@@ -145,38 +153,23 @@ private fun CardContent(name: String) {
                 .weight(1f)
                 .padding(12.dp)
         ) {
-            Text(text = "Hello, ")
+            Text(text = "Hello")
             Text(
-                text = name, style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.ExtraBold
-                )
+                text = current.name,
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold)
             )
-            if (expanded) {
-                Text(
-                    text = ("Composem ipsum color sit lazy, " +
-                            "padding theme elit, sed do bouncy. ").repeat(4),
-                )
+            if (current.isExpanded) {
+                Text(text = stringResource(current.extraTextRes).repeat(current.timesToRepeat))
             }
         }
-        IconButton(onClick = { expanded = !expanded }) {
+        IconButton(
+            onClick = onToggle
+        ) {
             Icon(
-                imageVector = if (expanded) Filled.ExpandLess else Filled.ExpandMore,
-                contentDescription = if (expanded) {
-                    stringResource(R.string.show_less)
-                } else {
-                    stringResource(R.string.show_more)
-                }
+                imageVector = if (current.isExpanded) Filled.ExpandLess else Filled.ExpandMore,
+                contentDescription = stringResource(current.textRes),
             )
         }
-    }
-}
-
-
-@Preview(showBackground = true, widthDp = 320, heightDp = 320)
-@Composable
-fun OnboardingPreview() {
-    BasicsCodelabTheme {
-        OnboardingScreen(onContinueClicked = {}) // Do nothing on click.
     }
 }
 
@@ -194,6 +187,13 @@ fun GreetingPreview() {
     }
 }
 
+@Preview(showBackground = true, widthDp = 320, heightDp = 320)
+@Composable
+fun OnboardingPreview() {
+    BasicsCodelabTheme {
+        OnboardingScreen(onContinueClicked = {})
+    }
+}
 
 @Preview
 @Composable
